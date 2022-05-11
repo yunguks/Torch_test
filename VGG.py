@@ -15,7 +15,6 @@ print(f'python : {sys.version}')
 
 train_transform = transforms.Compose(
     [   
-        transforms.Resize(112),
         transforms.ToTensor(),
         transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
     ]
@@ -23,7 +22,6 @@ train_transform = transforms.Compose(
 
 test_transform = transforms.Compose(
     [
-        transforms.Resize(112),
         transforms.ToTensor(),
         transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
     ]
@@ -42,36 +40,41 @@ classes = ('plane','car','bird','cat','deer','dog','frog', 'horse', 'ship', 'tru
 print(f'train_set : {len(train_set)}')
 print(f'test_set  : {len(test_set)}')
 
+
 class VGG(nn.Module):
     def __init__(self, num_classes=10, init_weights=True):
         super(VGG,self).__init__()
 
         #self.features = features
         self.convlayer = nn.Sequential(
-            # RGB 3 - > 64 / size(224,224)
+            # RGB 3 - > 64 / size(32,32)
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1, stride=1),
+            #nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            # size (112,112)
+            # size (16,16)
 
             nn.Conv2d(in_channels=64,out_channels=128, kernel_size=3, padding=1, stride=1),
+            #nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            # size (56, 56)
+            # size (8, 8)
 
             nn.Conv2d(in_channels=128, out_channels = 256, kernel_size=3, padding=1, stride=1),
+            #nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Conv2d(in_channels=256,out_channels=256, kernel_size=3, padding=1, stride=1),
+            #nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            # size (28, 28)
+            # size (4, 4)
 
-            nn.Conv2d(in_channels = 256, out_channels = 512, kernel_size=3, padding=1, stride=1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels = 512, out_channels = 512, kernel_size=3, padding=1, stride=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            # size (14,14)
+            # nn.Conv2d(in_channels = 256, out_channels = 512, kernel_size=3, padding=1, stride=1),
+            # nn.ReLU(),
+            # nn.Conv2d(in_channels = 512, out_channels = 512, kernel_size=3, padding=1, stride=1),
+            # nn.ReLU(),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
+            # # size (14,14)
 
             # nn.Conv2d(in_channels = 512, out_channels = 512, kernel_size=3, padding=1, stride=1),
             # nn.ReLU(),
@@ -84,10 +87,12 @@ class VGG(nn.Module):
         #self.avgpool = nn.AdaptiveAvgPool2d(5)
 
         self.fclayer =nn.Sequential(
-            nn.Linear(512*7*7, 4096),
+            nn.Linear(256*4*4, 4096),
+            #nn.BatchNorm1d(4096),
             nn.ReLU(True),
             nn.Dropout(0.5),
             nn.Linear(4096,4096),
+            #nn.BatchNorm1d(4096),
             nn.ReLU(True),
             nn.Dropout(0.5),
             nn.Linear(4096,num_classes)
@@ -109,19 +114,28 @@ if device == 'cuda':
 print(vgg11)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(vgg11.parameters(), lr = 0.0001)
+optimizer = optim.Adam(vgg11.parameters(), lr = 0.00005)
 
 loss_list = []
-for epoch in range(10):
+acc_list = []
+test_acc_list = []
+test_loss_list = []
+epochs = 20
+for epoch in range(epochs+1):
     running_loss = 0.0
+    running_acc = 0.0
+    test_loss= 0.0
     start_time = time.time()
-
+    total = 0
+    t_total = 0
+    correct =0 
+    t_correct = 0
     for i, data in enumerate(train_loader):
         inputs, labels = data
         if device =='cuda':
             inputs = inputs.to(device)
             labels = labels.to(device)
-        
+        #print(f'i : {i}, labels.shape :{labels.shape}')
         # gradients to zero
         optimizer.zero_grad()
 
@@ -131,39 +145,54 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()
 
+        _,predicted = torch.max(outputs,1)
+        total += labels.size(0)
+        running_acc += (predicted == labels).sum().item()
         running_loss += loss.item()
 
-        if i % 1000 == 999:
-            print(f'mini batch time : {time.time-start_time}')
-    print(f'epoch : {epoch+1}\n loss : {running_loss/5000:.3f}, time :{time.time()-start_time}')
-    loss_list.append(running_loss/128)
+    # test data로 바로 확인
+    with torch.no_grad():
+        for t_data in test_loader:
+            t_images, t_labels = t_data
+            if device =='cuda':
+                t_images= t_images.to(device)
+                t_labels= t_labels.to(device)
+            
+            t_outputs = vgg11(t_images)
+            t_loss = criterion(outputs, labels)
+
+            _, t_predicted = torch.max(t_outputs,1)
+            
+            t_total += t_labels.size(0)
+            t_correct += (t_predicted == t_labels).sum().item()
+
+            test_loss += t_loss.item()
+
+    print(f'epoch : {epoch+1}, time :{time.time()-start_time:.2f}s')
+    print(f'loss : {running_loss/len(train_loader):.3f}, acc: {running_acc/total:.2f}, ',end='')
+    print(f'test_loss : {test_loss/len(test_loader):.3f}, test_acc : {t_correct/t_total:.2f}\n')
+    loss_list.append(running_loss/len(train_loader))
+    acc_list.append(running_acc/total)
+    test_loss_list.append(test_loss/len(test_loader))
+    test_acc_list.append(t_correct/t_total)
 
 print(f'{"-"*20}\nFinish running\n\n')
 
-correct = 0
-total = 0
-class_correct = []
-class_total = []
-with torch.no_grad():
-    for data in test_loader:
-        images, labels = data
-        if device =='cuda':
-            images= imgaes.to(device)
-            labels= labels.to(device)
-        
-        outputs = vgg11(images)
-        _, predicted = torch.max(outputs,1)
-        
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+import matplotlib.pyplot as plt
 
-        c =(predicted== labels).squeeze()
-        for i in range(4):
-            labels = labels[i]
-            class_correct[label] += c[i].item()
-            class_total[label] += 1
+plt.figure(figsize=(12,6))
+plt.subplot(1,2,1)
+plt.plot(range(1,epochs+1),loss_list,label='train loss')
+plt.plot(range(1,epochs+1),test_loss_list,label='test loss')
+plt.xlabel('epoch')
+plt.ylabel('Loss')
+plt.legend()
 
-for i in range(10):
-    print(f'Accuracy of {classes[i]:5s} : {100*class_correct/class_total:.1f}%')
+plt.subplot(1,2,2)
+plt.plot(range(1,epochs+1),acc_list,label='train acc')
+plt.plot(range(1,epochs+1),test_acc_list,label='test acc')
+plt.xlabel('epoch')
+plt.ylabel('Acc')
+plt.legend()
 
-print(f'Total Accuracy : {100* correct /total:.1f}%')
+plt.show()
