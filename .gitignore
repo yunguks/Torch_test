@@ -2,7 +2,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 /data
-
+/vgg/data
+/vgg/models
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
