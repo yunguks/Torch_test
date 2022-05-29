@@ -8,6 +8,5 @@ apt-get install vim -y
 #apt-get install openssh-server -y
 #service ssh start
 #apt-get install python3-opencv -y
-
+apt-get install jupyter-notebook -y
 pip install -r requirments.txt
-#apt-get install jupyter-notebook -y
