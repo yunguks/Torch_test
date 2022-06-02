@@ -3,3 +3,4 @@ pytorch-model-summary
 opencv-python
 jupyter
 ipykernel
+einops
