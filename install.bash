@@ -10,3 +10,6 @@ apt-get install vim -y
 #apt-get install python3-opencv -y
 apt-get install jupyter-notebook -y
 pip install -r requirments.txt
+
+# sound
+#apt-get install libsndfile1-dev
