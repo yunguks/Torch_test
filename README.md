@@ -16,6 +16,7 @@ CNN
 - [ViT](https://github.com/yunguks/Torch_test/blob/main/VIT/VIT_example.ipynb)
 - [SwinT](https://github.com/yunguks/Torch_test/blob/main/swinT/swinT_test.ipynb)
 </br>
+</br>   
 
 ### 2. Vision Segmentation
 - [FCN](https://github.com/yunguks/Torch_test/tree/main/FCN)
@@ -23,7 +24,10 @@ CNN
 </br>
 
 ### 3. Transformer
-
+- [Transformer](https://github.com/yunguks/Torch_test/tree/main/Transformer_text)
+- [VIT](https://github.com/yunguks/Torch_test/tree/main/VIT)
+- [swinT](https://github.com/yunguks/Torch_test/tree/main/swinT)
 </br>
-
+</br>   
 ### 4. Audio
+- [STFT](https://github.com/yunguks/Torch_test/blob/main/audio/audio_test.ipynb)
